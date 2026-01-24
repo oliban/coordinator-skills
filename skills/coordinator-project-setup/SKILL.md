@@ -1,0 +1,366 @@
+---
+name: coordinator-project-setup
+description: Use when setting up a project to run with multi-worker coordinator, structuring features.json, creating PRD docs, or preparing for parallel feature implementation
+---
+
+# Coordinator Project Setup
+
+Sets up the project structure required for the coordinator agent to execute multi-phase plans.
+
+## When to Use
+
+Use this skill when:
+- Starting a new feature that will be coordinated
+- User has requirements but no prd.json yet
+- Existing plan needs conversion to prd.json format
+- Setting up progress.txt and folder structure
+
+## Output Structure
+
+This skill creates:
+
+```
+{plan_folder}/
+├── prd.json          # Machine-readable task list
+├── progress.txt      # Append-only learnings log
+└── specs/            # Optional detailed spec files
+    ├── BP-001-*.md
+    ├── PAR-001-*.md
+    └── ...
+```
+
+## Workflow
+
+### Step 1: Gather Requirements
+
+If requirements are unclear, ask:
+1. What is the feature/project name?
+2. What are the main components/features to implement?
+3. Are there any ordering dependencies?
+4. What validation/testing is needed?
+
+### Step 2: Create Plan Folder
+
+```bash
+mkdir -p {plan_folder}
+mkdir -p {plan_folder}/specs
+```
+
+### Step 3: Interview User About Project Config
+
+Use AskUserQuestion to gather project-specific settings:
+
+**Question 1: Testing Mode**
+```
+AskUserQuestion({
+  questions: [{
+    question: "How should tasks be verified in this project?",
+    header: "Testing",
+    options: [
+      { label: "Browser testing", description: "Chrome extension tests web UI (games, dashboards)" },
+      { label: "Unit tests", description: "Run test command (npm test, pytest, etc.)" },
+      { label: "Integration tests", description: "Run commands, check API responses" },
+      { label: "Manual", description: "I'll verify each task myself" }
+    ]
+  }]
+})
+```
+
+**Question 2: (If browser) Browser Config**
+```
+AskUserQuestion({
+  questions: [
+    {
+      question: "What URL does the dev server run on?",
+      header: "Dev URL",
+      options: [
+        { label: "localhost:8080", description: "Python http.server, common default" },
+        { label: "localhost:3000", description: "React/Next.js default" },
+        { label: "localhost:5173", description: "Vite default" }
+      ]
+    },
+    {
+      question: "Is there a test skill for this project?",
+      header: "Test skill",
+      options: [
+        { label: "None", description: "No specialized test skill" }
+      ]
+    }
+  ]
+})
+```
+
+**Question 3: Build Commands**
+```
+AskUserQuestion({
+  questions: [{
+    question: "How do you build/validate the project?",
+    header: "Build",
+    options: [
+      { label: "npm run build", description: "Node.js project" },
+      { label: "No build step", description: "Vanilla JS, Python, etc." }
+    ]
+  }]
+})
+```
+
+Store answers in prd.json config section.
+
+### Step 4: Generate prd.json
+
+Create `prd.json` following this schema:
+
+```json
+{
+  "project": "feature-name",
+  "branchName": "feature/feature-name",
+  "description": "High-level description of what this implements",
+  "config": {
+    "testing": {
+      "mode": "browser | unit | integration | manual",
+      "skill": "/test-game",
+      "devServerUrl": "http://localhost:8080",
+      "devServerCommand": "python3 -m http.server 8080"
+    },
+    "build": {
+      "command": "npm run build",
+      "lintCommand": "npm run lint",
+      "testCommand": "npm test"
+    }
+  },
+  "userStories": [
+    {
+      "id": "BP-001",
+      "title": "Base plate: Foundation",
+      "description": "Detailed description of this task",
+      "acceptanceCriteria": [
+        "Testable criterion 1",
+        "Testable criterion 2"
+      ],
+      "priority": 1,
+      "passes": false,
+      "blockedBy": [],
+      "isBasePlate": true
+    }
+  ]
+}
+```
+
+### Step 5: Initialize progress.txt
+
+```bash
+cat > {plan_folder}/progress.txt << 'EOF'
+# Progress Log
+# Append-only learnings from coordination
+# Project: {project-name}
+# Started: {timestamp}
+#
+# Format: [{timestamp}] Task {id} {STATUS}: {message}
+EOF
+```
+
+### Step 6: Create Spec Files (Optional)
+
+For complex tasks, create individual spec files:
+
+```markdown
+# Task {id}: {title}
+
+## Description
+{detailed description}
+
+## Implementation Details
+{what needs to be implemented}
+
+## Acceptance Criteria
+{criteria from prd.json with more detail}
+
+## Browser Test Instructions
+{if applicable, step-by-step browser testing}
+
+## JavaScript Verification
+```javascript
+// Commands that return true/false for pass/fail
+```
+```
+
+## Validation Checklist
+
+Before considering setup complete:
+
+- [ ] `prd.json` exists and is valid JSON
+- [ ] All task IDs are unique (BP-* or PAR-*)
+- [ ] `blockedBy` arrays reference valid task IDs
+- [ ] No circular dependencies
+- [ ] All `acceptanceCriteria` are testable (not vague)
+- [ ] `progress.txt` initialized
+- [ ] Base plate tasks identified correctly
+- [ ] Parallel tasks have correct `blockedBy`
+
+## prd.json Quick Reference
+
+### Task ID Prefixes
+
+| Prefix | Meaning | Execution |
+|--------|---------|-----------|
+| `BP-*` | Base Plate | Sequential, in priority order |
+| `PAR-*` | Parallel | Concurrent after all blockers pass |
+
+### Required Fields
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `id` | string | Unique identifier |
+| `title` | string | Short descriptive title |
+| `description` | string | Detailed implementation notes |
+| `acceptanceCriteria` | string[] | Testable conditions |
+| `priority` | number | 1 = highest priority |
+| `passes` | boolean | Always start as `false` |
+| `blockedBy` | string[] | Task IDs that must complete first |
+| `isBasePlate` | boolean | `true` for sequential, `false` for parallel |
+
+### Acceptance Criteria Best Practices
+
+**Good (testable):**
+- "File js/config.js exists with SPEED constant"
+- "Build passes: npm run build exits with code 0"
+- "Player visible: game.scene.scenes[0].player !== undefined"
+
+**Bad (vague):**
+- "Works correctly"
+- "Good performance"
+- "User-friendly interface"
+
+## Example: API Service
+
+```json
+{
+  "project": "user-api",
+  "branchName": "feature/user-api",
+  "description": "Implements user management API endpoints",
+  "config": {
+    "testing": { "mode": "unit" },
+    "build": { "command": "npm run build", "testCommand": "npm test" }
+  },
+  "userStories": [
+    {
+      "id": "BP-001",
+      "title": "User model and schema",
+      "description": "Create User model with validation",
+      "acceptanceCriteria": [
+        "src/models/User.ts exists",
+        "User has id, email, name fields",
+        "npm run build passes"
+      ],
+      "priority": 1,
+      "passes": false,
+      "blockedBy": [],
+      "isBasePlate": true
+    },
+    {
+      "id": "PAR-001",
+      "title": "GET /users endpoint",
+      "description": "List all users with pagination",
+      "acceptanceCriteria": [
+        "GET /users returns 200",
+        "Response includes users array",
+        "Unit tests pass"
+      ],
+      "priority": 2,
+      "passes": false,
+      "blockedBy": ["BP-001"],
+      "isBasePlate": false
+    }
+  ]
+}
+```
+
+## Example: Web Application
+
+```json
+{
+  "project": "dashboard",
+  "branchName": "feature/dashboard",
+  "description": "Implements admin dashboard with charts",
+  "config": {
+    "testing": {
+      "mode": "browser",
+      "devServerUrl": "http://localhost:3000",
+      "devServerCommand": "npm run dev"
+    }
+  },
+  "userStories": [
+    {
+      "id": "BP-001",
+      "title": "Dashboard layout",
+      "description": "Create base dashboard layout with sidebar",
+      "acceptanceCriteria": [
+        "src/components/Dashboard.tsx exists",
+        "Sidebar visible: document.querySelector('.sidebar') !== null",
+        "No console errors"
+      ],
+      "priority": 1,
+      "passes": false,
+      "blockedBy": [],
+      "isBasePlate": true
+    }
+  ]
+}
+```
+
+## Example: CLI Tool
+
+```json
+{
+  "project": "cli-tool",
+  "branchName": "feature/cli-tool",
+  "description": "Implements command-line interface",
+  "config": {
+    "testing": { "mode": "integration" },
+    "build": { "command": "go build" }
+  },
+  "userStories": [
+    {
+      "id": "BP-001",
+      "title": "CLI framework setup",
+      "description": "Set up cobra CLI with root command",
+      "acceptanceCriteria": [
+        "cmd/root.go exists",
+        "./cli --help shows usage",
+        "go build succeeds"
+      ],
+      "priority": 1,
+      "passes": false,
+      "blockedBy": [],
+      "isBasePlate": true
+    }
+  ]
+}
+```
+
+## Handoff to Coordinator
+
+After setup is complete, tell the user:
+
+```
+Project setup complete!
+
+Created:
+- {plan_folder}/prd.json (X tasks: Y base plate, Z parallel)
+- {plan_folder}/progress.txt
+- {plan_folder}/specs/ (if applicable)
+
+Testing mode: {config.testing.mode}
+
+To execute this plan, run:
+/coordinate {plan_folder}
+```
+
+**Add mode-specific prerequisites:**
+
+| Mode | Prerequisites |
+|------|---------------|
+| `browser` | Chrome with Claude extension active, dev server running at {devServerUrl} |
+| `unit` | Test framework installed |
+| `integration` | Services running (if applicable) |
+| `manual` | None (user will verify manually) |
