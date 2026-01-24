@@ -52,58 +52,72 @@ mkdir -p {plan_folder}/specs
 
 ### Step 3: Interview User About Project Config
 
-Use AskUserQuestion to gather project-specific settings:
+**⚠️ REQUIRED: DO NOT SKIP THIS STEP**
 
-**Question 1: Testing Mode**
-```
-AskUserQuestion({
-  questions: [{
-    question: "How should tasks be verified in this project?",
-    header: "Testing",
-    options: [
-      { label: "Browser testing", description: "Chrome extension tests web UI (games, dashboards)" },
-      { label: "Unit tests", description: "Run test command (npm test, pytest, etc.)" },
-      { label: "Integration tests", description: "Run commands, check API responses" },
-      { label: "Manual", description: "I'll verify each task myself" }
-    ]
-  }]
-})
-```
+You MUST ask the user these questions before creating any test skill.
+Do NOT proceed to Step 4 until you have received answers to ALL questions below.
 
-**Question 2: (If browser) Browser Config**
-```
-AskUserQuestion({
-  questions: [
-    {
-      question: "What URL does the dev server run on?",
-      header: "Dev URL",
-      options: [
-        { label: "localhost:8080", description: "Python http.server, common default" },
-        { label: "localhost:3000", description: "React/Next.js default" },
-        { label: "localhost:5173", description: "Vite default" }
-      ]
-    }
-  ]
-})
-```
+---
 
-**Question 3: Build Commands**
-```
-AskUserQuestion({
-  questions: [{
-    question: "How do you build/validate the project?",
-    header: "Build",
-    options: [
-      { label: "npm run build", description: "Node.js project" },
-      { label: "No build step", description: "Vanilla JS, Python, etc." }
-    ]
-  }]
-})
-```
+**Question 1: Testing Mode** (REQUIRED)
 
-Store answers in prd.json config section.
+Ask the user NOW using AskUserQuestion:
+- question: "How should tasks be verified in this project?"
+- header: "Testing"
+- options:
+  - "Browser testing" - Chrome extension tests web UI (games, dashboards)
+  - "Unit tests" - Run test command (npm test, pytest, etc.)
+  - "Integration tests" - Run commands, check API responses
+  - "Manual" - I'll verify each task myself
+
+**Store the answer as `testingMode`.**
+
+---
+
+**Question 2: Browser Config** (REQUIRED if testingMode = "Browser testing")
+
+If the user selected "Browser testing", ask NOW using AskUserQuestion:
+- question: "What URL does the dev server run on?"
+- header: "Dev URL"
+- options:
+  - "localhost:8080" - Python http.server, common default
+  - "localhost:3000" - React/Next.js default
+  - "localhost:5173" - Vite default
+
+**Store the answer as `devServerUrl`.**
+
+---
+
+**Question 3: Build Commands** (REQUIRED)
+
+Ask the user NOW using AskUserQuestion:
+- question: "How do you build/validate the project?"
+- header: "Build"
+- options:
+  - "npm run build" - Node.js project
+  - "No build step" - Vanilla JS, Python, etc.
+
+**Store the answer as `buildCommand`.**
+
+---
+
+### Checkpoint: Verify Interview Complete
+
+**⛔ STOP: Do not proceed until you have answers.**
+
+Before proceeding to Step 4, confirm you have collected:
+- [ ] `testingMode` from Question 1 (REQUIRED)
+- [ ] `devServerUrl` from Question 2 (REQUIRED if browser mode)
+- [ ] `buildCommand` from Question 3 (REQUIRED)
+
+If any required answers are missing, GO BACK and ask the user now.
 
 ### Step 4: Create Custom Test Skill
+
+**Prerequisite:** You must have completed the interview in Step 3 with these values:
+- `testingMode` - determines which template to use below
+- `devServerUrl` - used in Browser template (if applicable)
+- `buildCommand` - stored in prd.json config
 
 Create a project-specific test skill using the skill creator:
 
@@ -113,6 +127,8 @@ Create a project-specific test skill using the skill creator:
    ```
 
 2. **Create the test skill** at `.claude/skills/test-{project-name}/SKILL.md`
+   - Select the template below based on `testingMode` from Step 3
+   - Replace placeholders with actual values from interview
 
 3. **Set skill reference** in prd.json config:
    ```json
@@ -122,6 +138,8 @@ Create a project-specific test skill using the skill creator:
    ```
 
 #### Test Skill Templates by Mode
+
+Use `testingMode` from Step 3 to select the correct template:
 
 **Browser Mode:**
 
