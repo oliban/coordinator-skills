@@ -6,7 +6,7 @@ Reusable Claude Code skills for multi-phase project coordination with parallel t
 
 | Skill | Description |
 |-------|-------------|
-| `/coordinator-project-setup` | Interactive setup wizard that creates prd.json with project config |
+| `/coordinator-project-setup` | Interactive setup wizard that creates prd.json and a custom test skill |
 | `/create-implementation-plan` | Create structured implementation plans with base plate + parallel phases |
 | `/coordinate` | Execute plans by orchestrating coding, review, and test agents |
 
@@ -17,8 +17,12 @@ Add to your project's `.claude/settings.json`:
 ```json
 {
   "skills": {
-    "source": "git@github.com:oliban/coordinator-skills.git",
-    "path": "skills"
+    "imports": [
+      {
+        "source": "git@github.com:oliban/coordinator-skills.git",
+        "path": "skills"
+      }
+    ]
   }
 }
 ```
@@ -34,9 +38,10 @@ Or copy the `skills/` directory to your project's `.claude/skills/`.
 ```
 
 This will:
-- Ask about your testing approach (browser, unit, integration, manual)
-- Gather build commands
-- Create `prd.json` with tasks and config
+1. Ask about your testing approach (browser, unit, integration, manual)
+2. Gather build commands and dev server URL
+3. Create a **custom test skill** at `.claude/skills/test-{project}/SKILL.md`
+4. Create `prd.json` with tasks and config
 
 ### 2. Execute the Plan
 
@@ -48,7 +53,63 @@ The coordinator will:
 - Run base plate tasks sequentially
 - Run parallel tasks concurrently
 - Spawn coding, review, and test agents
+- Test agents invoke your project's custom test skill
 - Track progress in `progress.txt`
+
+## Flow Diagram
+
+```
+/coordinator-project-setup
+        │
+        ▼
+┌───────────────────────────────┐
+│ 1. Interview user             │
+│    - Testing mode             │
+│    - Dev server URL           │
+│    - Build commands           │
+└───────────────────────────────┘
+        │
+        ▼
+┌───────────────────────────────┐
+│ 2. Create test skill          │
+│    .claude/skills/test-{proj} │
+│    (mode-specific template)   │
+└───────────────────────────────┘
+        │
+        ▼
+┌───────────────────────────────┐
+│ 3. Create prd.json            │
+│    - Tasks with criteria      │
+│    - Config with skill ref    │
+└───────────────────────────────┘
+        │
+        ▼
+/coordinate path/to/plan
+        │
+        ▼
+┌───────────────────────────────┐
+│ For each task:                │
+│   Coder → Reviewer → Tester   │
+│                     ↓         │
+│            Invokes /test-{proj}│
+└───────────────────────────────┘
+```
+
+## Output Structure
+
+After setup, your project will have:
+
+```
+your-project/
+├── .claude/
+│   └── skills/
+│       └── test-{project}/
+│           └── SKILL.md      # Custom test skill
+└── {plan-folder}/
+    ├── prd.json              # Task definitions
+    ├── progress.txt          # Execution log
+    └── specs/                # Optional task specs
+```
 
 ## prd.json Schema
 
@@ -60,7 +121,7 @@ The coordinator will:
   "config": {
     "testing": {
       "mode": "browser | unit | integration | manual",
-      "skill": "/test-game",
+      "skill": "/test-feature-name",
       "devServerUrl": "http://localhost:8080",
       "devServerCommand": "python3 -m http.server 8080"
     },
@@ -86,12 +147,12 @@ The coordinator will:
 
 ## Testing Modes
 
-| Mode | When to Use | Pre-flight |
-|------|-------------|------------|
-| `browser` | Web UI testing with Chrome extension | Chrome extension + dev server |
-| `unit` | Projects with test suites | None |
-| `integration` | API/CLI testing | Optional server check |
-| `manual` | User verifies each task | None |
+| Mode | Test Skill Behavior | Pre-flight Check |
+|------|---------------------|------------------|
+| `browser` | Chrome automation, JS verification, screenshots | Chrome extension + dev server |
+| `unit` | Run test command, parse output | None |
+| `integration` | CLI commands, API calls, curl | Optional server check |
+| `manual` | Present criteria to user via AskUserQuestion | None |
 
 ## Task Types
 
