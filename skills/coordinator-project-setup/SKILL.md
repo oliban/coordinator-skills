@@ -27,6 +27,10 @@ This skill creates:
     ├── BP-001-*.md
     ├── PAR-001-*.md
     └── ...
+
+.claude/skills/
+└── test-{project}/
+    └── SKILL.md      # Project-specific test skill
 ```
 
 ## Workflow
@@ -78,13 +82,6 @@ AskUserQuestion({
         { label: "localhost:3000", description: "React/Next.js default" },
         { label: "localhost:5173", description: "Vite default" }
       ]
-    },
-    {
-      question: "Is there a test skill for this project?",
-      header: "Test skill",
-      options: [
-        { label: "None", description: "No specialized test skill" }
-      ]
     }
   ]
 })
@@ -106,7 +103,127 @@ AskUserQuestion({
 
 Store answers in prd.json config section.
 
-### Step 4: Generate prd.json
+### Step 4: Create Custom Test Skill
+
+Create a project-specific test skill using the skill creator:
+
+1. **Invoke the skill creator:**
+   ```
+   Skill({ skill: "superpowers:writing-skills" })
+   ```
+
+2. **Create the test skill** at `.claude/skills/test-{project-name}/SKILL.md`
+
+3. **Set skill reference** in prd.json config:
+   ```json
+   "testing": {
+     "skill": "/test-{project-name}"
+   }
+   ```
+
+#### Test Skill Templates by Mode
+
+**Browser Mode:**
+
+```markdown
+---
+name: test-{project-name}
+description: Browser testing for {project-name} via Chrome automation.
+---
+
+# Test Agent for {project-name}
+
+You verify acceptance criteria using Chrome browser automation.
+
+## Prerequisites
+- Dev server running at {devServerUrl}
+- Chrome with Claude extension active
+
+## How to Test
+1. Get browser context: `mcp__claude-in-chrome__tabs_context_mcp`
+2. Navigate to {devServerUrl}
+3. For each criterion:
+   - Execute JavaScript verification
+   - Take screenshots for visual checks
+   - Capture console errors
+
+## Output Format
+PASS: X/Y criteria met (with evidence)
+FAIL: List failures with details
+```
+
+**Unit Mode:**
+
+```markdown
+---
+name: test-{project-name}
+description: Unit test runner for {project-name}.
+---
+
+# Test Agent for {project-name}
+
+You verify acceptance criteria by running the test suite.
+
+## Test Command
+{config.build.testCommand}
+
+## How to Test
+1. Run the test command
+2. Parse output for failures
+3. Check each criterion against results
+
+## Output Format
+PASS: All tests pass, criteria met
+FAIL: List failures with test output
+```
+
+**Integration Mode:**
+
+```markdown
+---
+name: test-{project-name}
+description: Integration testing for {project-name}.
+---
+
+# Test Agent for {project-name}
+
+You verify acceptance criteria via CLI commands and API calls.
+
+## How to Test
+1. Execute integration commands (curl, CLI, etc.)
+2. Verify responses match expected values
+3. Capture output as evidence
+
+## Output Format
+PASS: All criteria met (with evidence)
+FAIL: List failures with command output
+```
+
+**Manual Mode:**
+
+```markdown
+---
+name: test-{project-name}
+description: Manual verification for {project-name}.
+---
+
+# Test Agent for {project-name}
+
+You present acceptance criteria to the user for manual verification.
+
+## How to Test
+1. Present each criterion to the user
+2. Use AskUserQuestion for each:
+   - "Does {criterion} pass?"
+   - Options: Pass, Fail
+3. Collect responses
+
+## Output Format
+PASS: User confirmed all criteria
+FAIL: List criteria user marked as failed
+```
+
+### Step 5: Generate prd.json
 
 Create `prd.json` following this schema:
 
@@ -146,7 +263,7 @@ Create `prd.json` following this schema:
 }
 ```
 
-### Step 5: Initialize progress.txt
+### Step 6: Initialize progress.txt
 
 ```bash
 cat > {plan_folder}/progress.txt << 'EOF'
@@ -159,7 +276,7 @@ cat > {plan_folder}/progress.txt << 'EOF'
 EOF
 ```
 
-### Step 6: Create Spec Files (Optional)
+### Step 7: Create Spec Files (Optional)
 
 For complex tasks, create individual spec files:
 
@@ -196,6 +313,8 @@ Before considering setup complete:
 - [ ] `progress.txt` initialized
 - [ ] Base plate tasks identified correctly
 - [ ] Parallel tasks have correct `blockedBy`
+- [ ] Test skill created at `.claude/skills/test-{project}/SKILL.md`
+- [ ] `config.testing.skill` references the test skill
 
 ## prd.json Quick Reference
 
@@ -239,7 +358,7 @@ Before considering setup complete:
   "branchName": "feature/user-api",
   "description": "Implements user management API endpoints",
   "config": {
-    "testing": { "mode": "unit" },
+    "testing": { "mode": "unit", "skill": "/test-user-api" },
     "build": { "command": "npm run build", "testCommand": "npm test" }
   },
   "userStories": [
@@ -285,6 +404,7 @@ Before considering setup complete:
   "config": {
     "testing": {
       "mode": "browser",
+      "skill": "/test-dashboard",
       "devServerUrl": "http://localhost:3000",
       "devServerCommand": "npm run dev"
     }
@@ -316,7 +436,7 @@ Before considering setup complete:
   "branchName": "feature/cli-tool",
   "description": "Implements command-line interface",
   "config": {
-    "testing": { "mode": "integration" },
+    "testing": { "mode": "integration", "skill": "/test-cli-tool" },
     "build": { "command": "go build" }
   },
   "userStories": [
@@ -349,8 +469,10 @@ Created:
 - {plan_folder}/prd.json (X tasks: Y base plate, Z parallel)
 - {plan_folder}/progress.txt
 - {plan_folder}/specs/ (if applicable)
+- .claude/skills/test-{project}/SKILL.md
 
 Testing mode: {config.testing.mode}
+Test skill: /test-{project}
 
 To execute this plan, run:
 /coordinate {plan_folder}

@@ -124,7 +124,7 @@ When ANY agent completes, IMMEDIATELY spawn new agents:
 | Field | Optional | Description |
 |-------|----------|-------------|
 | `config.testing.mode` | No | How tasks are verified: `browser`, `unit`, `integration`, `manual` |
-| `config.testing.skill` | Yes | Skill to invoke for browser/custom testing (e.g., `/test-game`) |
+| `config.testing.skill` | No | Project-specific test skill (e.g., `/test-myproject`) |
 | `config.testing.devServerUrl` | Yes | URL for browser tests (e.g., `http://localhost:8080`) |
 | `config.testing.devServerCommand` | Yes | Command to start dev server |
 | `config.build.command` | Yes | Build command (e.g., `npm run build`) |
@@ -135,10 +135,10 @@ When ANY agent completes, IMMEDIATELY spawn new agents:
 
 | Mode | Pre-flight Check | Test Agent Behavior |
 |------|------------------|---------------------|
-| `browser` | Chrome extension + dev server | Uses Chrome MCP, invokes test skill |
-| `unit` | None | Runs test command from config |
-| `integration` | Optional server check | Runs integration tests |
-| `manual` | None | Presents criteria, asks user to verify |
+| `browser` | Chrome extension + dev server | Invokes test skill with Chrome MCP |
+| `unit` | None | Invokes test skill to run test command |
+| `integration` | Optional server check | Invokes test skill for integration tests |
+| `manual` | None | Invokes test skill to present criteria to user |
 
 ---
 
@@ -335,83 +335,32 @@ Task tool parameters:
 - run_in_background: true
 ```
 
-**Prompt varies by testing.mode:**
-
-#### If testing.mode = "browser"
+**Prompt:**
 
 ```
 You are testing task {id}: {title}
 
-Use {config.testing.skill} skill to execute browser tests.
+Invoke the project's test skill:
+Skill({ skill: "{config.testing.skill}" })
 
-## Prerequisites
-- Dev server running at {config.testing.devServerUrl}
-- Chrome extension available
-
-## Acceptance Criteria to Verify
-{acceptanceCriteria - each should be testable}
-
-## Instructions
-For each criterion:
-1. Perform any setup needed
-2. Execute verification (JS command, visual check, etc.)
-3. Capture evidence (screenshot if visual)
-
-## Required Output
-PASS: All criteria met (list evidence)
-FAIL: List failures with specific details
-```
-
-#### If testing.mode = "unit"
-
-```
-You are testing task {id}: {title}
-
-Run the project's test suite:
-{config.build.testCommand}
+## Task Details
+- Working directory: {worktree_path}
+- Testing mode: {config.testing.mode}
 
 ## Acceptance Criteria to Verify
 {acceptanceCriteria}
 
 ## Instructions
-1. Run the test command
-2. Check for any failures
-3. Verify each criterion against test output
-
-## Required Output
-PASS: All tests pass, criteria met
-FAIL: List failures with specific test output
-```
-
-#### If testing.mode = "integration"
-
-```
-You are testing task {id}: {title}
-
-## Acceptance Criteria to Verify
-{acceptanceCriteria}
-
-## Instructions
-1. Run integration commands (curl, API calls, CLI)
-2. Verify each criterion
-3. Capture output as evidence
+1. Invoke the test skill
+2. Follow its instructions for verification
+3. Report results
 
 ## Required Output
 PASS: All criteria met (with evidence)
 FAIL: List failures with specific details
 ```
 
-#### If testing.mode = "manual"
-
-```
-Please verify these criteria manually for task {id}: {title}
-
-## Acceptance Criteria
-{acceptanceCriteria}
-
-Present each criterion to the user and ask them to verify.
-Report their responses as PASS or FAIL.
-```
+The test skill (created during setup) contains mode-specific testing logic.
 
 ### Fixer Agent
 
