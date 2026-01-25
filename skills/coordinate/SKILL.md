@@ -72,6 +72,27 @@ When ANY agent completes, IMMEDIATELY spawn new agents:
 
 **Never wait idle. Always have maximum agents running.**
 
+### Rule 5: STATUS UPDATES EVERY 3 MINUTES
+
+Output a status update every 3 minutes during coordination:
+
+```
+## Status Update [{timestamp}]
+
+**Active agents:** {count}
+- {agent-type} for {task-id}: {status}
+- ...
+
+**Completed:** {X}/{total} tasks
+**In progress:** {list of task IDs}
+**Blocked:** {list of task IDs waiting on dependencies}
+
+**Recent events:**
+- {last 3-5 events from progress.txt}
+```
+
+This keeps the user informed of progress during long-running coordination sessions.
+
 ---
 
 ## prd.json Schema
