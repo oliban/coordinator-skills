@@ -93,6 +93,25 @@ Output a status update every 3 minutes during coordination:
 
 This keeps the user informed of progress during long-running coordination sessions.
 
+### Rule 6: USER BUG REPORTS → SPAWN FIXER
+
+When the user reports a bug during coordination:
+
+1. **DO NOT** attempt to fix it yourself
+2. **DO** spawn a fixer agent immediately:
+   ```
+   Task tool parameters:
+   - subagent_type: "general-purpose"
+   - model: "sonnet"
+   - run_in_background: true
+   - prompt: Include bug description, affected task, and worktree path
+   ```
+3. **Wait** for the fixer agent to complete (TaskOutput)
+4. **Report back** to the user with the fix result
+5. **Re-run** the test agent to verify the fix
+
+You are a coordinator. You delegate ALL work, including bug fixes.
+
 ---
 
 ## prd.json Schema
