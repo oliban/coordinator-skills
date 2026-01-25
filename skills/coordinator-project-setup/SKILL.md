@@ -1,6 +1,29 @@
 ---
 name: coordinator-project-setup
 description: Use when setting up a project to run with multi-worker coordinator, structuring features.json, creating PRD docs, or preparing for parallel feature implementation
+hooks:
+  PreToolUse:
+    - matcher: "Write"
+      hooks:
+        - type: command
+          command: |
+            input=$(cat)
+            file_path=$(echo "$input" | jq -r '.tool_input.file_path // empty')
+            content=$(echo "$input" | jq -r '.tool_input.content // empty')
+            if [[ "$file_path" =~ \.claude/skills/test-.*/SKILL\.md$ ]]; then
+              if echo "$content" | grep -qE '\{(devServerUrl|project-name|testingMode|config\.build\.testCommand)\}'; then
+                echo "BLOCKED: Test skill contains placeholder values like {devServerUrl} or {project-name}." >&2
+                echo "" >&2
+                echo "You skipped the interview. Go back to Step 3 and use AskUserQuestion to ask:" >&2
+                echo "  1. Testing mode (browser/unit/integration/manual)" >&2
+                echo "  2. Dev server URL (if browser mode)" >&2
+                echo "  3. Build command" >&2
+                echo "" >&2
+                echo "Then replace ALL placeholders with the user's actual answers." >&2
+                exit 2
+              fi
+            fi
+            exit 0
 ---
 
 # Coordinator Project Setup
