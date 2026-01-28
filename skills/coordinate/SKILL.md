@@ -86,6 +86,7 @@ Output a status update every 3 minutes during coordination:
 **Completed:** {X}/{total} tasks
 **In progress:** {list of task IDs}
 **Blocked:** {list of task IDs waiting on dependencies}
+**Cost:** {agents_spawned} agents spawned (coders: X, reviewers: X, testers: X, fixers: X)
 
 **Recent events:**
 - {last 3-5 events from progress.txt}
@@ -111,6 +112,35 @@ When the user reports a bug during coordination:
 5. **Re-run** the test agent to verify the fix
 
 You are a coordinator. You delegate ALL work, including bug fixes.
+
+### Rule 7: TRACK AND REPORT COSTS
+
+Maintain a running cost tracker throughout coordination:
+
+**Track per agent spawned:**
+- Agent type (coder, reviewer, tester, fixer)
+- Task ID it worked on
+- Model used
+
+**Running totals to maintain:**
+- `agents_spawned`: total count by type
+- `retries`: number of fix attempts
+
+**Include in every status update (Rule 5):**
+```
+**Cost:** {agents_spawned} agents spawned (coders: X, reviewers: X, testers: X, fixers: X)
+```
+
+**Include in completion summary (Step 4):**
+```
+## Cost
+- Agents spawned: {total}
+  - Coders: {count}
+  - Reviewers: {count}
+  - Testers: {count}
+  - Fixers: {count}
+- Retries: {count}
+```
 
 ---
 
@@ -603,7 +633,13 @@ When all `prd.json` tasks have `passes: true`:
 - Base plate: 2 (sequential)
 - Parallel: 3
 - Retries: 0
-- Duration: 47 min
+
+## Cost
+- Agents spawned: 15
+  - Coders: 5
+  - Reviewers: 5
+  - Testers: 5
+  - Fixers: 0
 
 ## All Tasks
 ✅ BP-001: Core setup
