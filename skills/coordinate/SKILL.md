@@ -65,10 +65,10 @@ The coordinator NEVER:
 
 When ANY agent completes, IMMEDIATELY spawn new agents:
 - Coder completes → spawn reviewer + any unblocked coders
-- Reviewer approves → spawn tester
-- Reviewer rejects → spawn fixer coder
+- Reviewer completes → **output its bullet-point summary to the user**, then spawn tester (if approved) or fixer (if changes needed)
 - Tester passes → merge, update prd.json, may unblock tasks
 - Tester fails → spawn fixer (max 3 retries)
+- Fixer completes → **output its bullet-point summary to the user**, then re-run review/test
 
 **Never wait idle. Always have maximum agents running.**
 
@@ -391,9 +391,25 @@ Working directory: {worktree_path}
 2. Code quality acceptable?
 3. No obvious bugs?
 
-## Output
-- APPROVED: Ready for testing
-- CHANGES_NEEDED: List specific issues to fix
+## Required Output Format
+
+APPROVED or CHANGES_NEEDED, followed by a short bullet-point summary:
+
+```
+APPROVED
+- Implements all acceptance criteria
+- Clean code, follows existing patterns
+- No bugs found
+```
+
+or
+
+```
+CHANGES_NEEDED
+- Missing error handling in submitForm()
+- Unused import on line 12
+- acceptanceCriteria[2] not met: no loading spinner
+```
 ```
 
 ### Test Agent
@@ -456,6 +472,17 @@ Working directory: {worktree_path}
 ## Instructions
 Fix ONLY the specific issues listed. Do not rewrite everything.
 Commit when done: "{id}: Fix {issue summary}"
+
+## Required Output Format
+
+Short bullet-point summary of what was fixed:
+
+```
+FIXED
+- Added error handling in submitForm()
+- Removed unused import on line 12
+- Added loading spinner for criteria[2]
+```
 ```
 
 ---
