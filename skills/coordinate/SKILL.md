@@ -1,6 +1,44 @@
 ---
 name: coordinate
 description: Use when implementing a multi-phase plan. Reads plan files, identifies parallel tracks, spawns coding/review/test agents in worktrees, coordinates until complete. Invoke with path to plan folder.
+hooks:
+  PreToolUse:
+    - matcher: "Edit"
+      hooks:
+        - type: command
+          command: |
+            input=$(cat)
+            file_path=$(echo "$input" | jq -r '.tool_input.file_path // empty')
+            new_string=$(echo "$input" | jq -r '.tool_input.new_string // empty')
+            if [[ "$file_path" =~ prd\.json$ ]]; then
+              if echo "$new_string" | grep -q '"passes":\s*true'; then
+                if ! echo "$new_string" | grep -qi 'TESTED:.*PASS'; then
+                  echo "BLOCKED: You are setting passes=true without test evidence." >&2
+                  echo "" >&2
+                  echo "Before marking a task as passed, you MUST:" >&2
+                  echo "  1. Spawn a TEST AGENT using the Task tool" >&2
+                  echo "  2. The test agent MUST invoke: Skill({ skill: \"{config.testing.skill}\" })" >&2
+                  echo "  3. Wait for TaskOutput showing PASS with evidence" >&2
+                  echo "  4. Log the test result to progress.txt" >&2
+                  echo "" >&2
+                  echo "Include test evidence in old_string as a comment:" >&2
+                  echo "  // TESTED: {test-agent-id} returned PASS" >&2
+                  exit 2
+                fi
+              fi
+            fi
+            exit 0
+    - matcher: "Bash"
+      hooks:
+        - type: command
+          command: |
+            input=$(cat)
+            cmd=$(echo "$input" | jq -r '.tool_input.command // empty')
+            if echo "$cmd" | grep -qE 'git\s+merge'; then
+              echo "REMINDER: Only merge after test agent confirms PASS." >&2
+              echo "Ensure you spawned a test agent and it invoked the test skill." >&2
+            fi
+            exit 0
 ---
 
 # Coordinator Agent
@@ -491,21 +529,23 @@ FIXED
 
 ### prd.json Updates
 
+**IMPORTANT:** A PreToolUse hook enforces that you MUST run the test agent before setting `passes: true`.
+
 When a task passes all tests:
 
-```javascript
-// Read current prd.json
-const prd = JSON.parse(fs.readFileSync('prd.json'));
+1. **First**, spawn the test agent and wait for PASS result
+2. **Then**, log to progress.txt: `[{timestamp}] Task {id} TESTED: {test-agent-id} returned PASS`
+3. **Finally**, update prd.json with test evidence in the edit:
 
-// Update the passed task
+```javascript
+// TESTED: agent-abc123 returned PASS
 const task = prd.userStories.find(t => t.id === taskId);
 task.passes = true;
-
-// Write back
-fs.writeFileSync('prd.json', JSON.stringify(prd, null, 2));
 ```
 
-Execute this via Bash with jq or direct file edit.
+The hook will block if you try to set `passes: true` without the `// TESTED:` comment proving a test agent ran.
+
+Execute via Edit tool (not Bash) so the hook can validate.
 
 ### progress.txt Logging
 
