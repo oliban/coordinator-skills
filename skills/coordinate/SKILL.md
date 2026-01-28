@@ -102,7 +102,7 @@ When the user reports a bug during coordination:
    ```
    Task tool parameters:
    - subagent_type: "general-purpose"
-   - model: "sonnet"
+   - model: "opus"
    - run_in_background: true
    - prompt: Include bug description, affected task, and worktree path
    ```
@@ -313,7 +313,7 @@ This signals to outer loops (like ralph.sh) that coordination is done.
 ```
 Task tool parameters:
 - subagent_type: "general-purpose"
-- model: "sonnet" (or "opus" for complex tasks)
+- model: "opus"
 - run_in_background: true
 ```
 
@@ -371,7 +371,7 @@ Working directory: {worktree_path}
 ```
 Task tool parameters:
 - subagent_type: "general-purpose"
-- model: "sonnet"
+- model: "opus"
 - run_in_background: true
 ```
 
@@ -407,7 +407,7 @@ The test skill (created during setup) contains mode-specific testing logic.
 ```
 Task tool parameters:
 - subagent_type: "general-purpose"
-- model: "sonnet"
+- model: "opus"
 - run_in_background: true
 ```
 
